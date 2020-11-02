@@ -7,14 +7,17 @@ from flask import Flask, render_template, request, redirect
 app = Flask(__name__)
 
 
-response = requests.get(
-    "http://api.nbp.pl/api/exchangerates/tables/C?format=json"
-)
-data = response.json()
-rates = data[0].get('rates')
+def get_rates():
+    response = requests.get(
+        "http://api.nbp.pl/api/exchangerates/tables/C?format=json"
+    )
+    data = response.json()
+    rates = data[0].get('rates')
+    return rates
 
 
 def get_codes():
+    rates = get_rates()
     codes = []
     for data in rates:
         codes.append(data.get('code'))
@@ -22,6 +25,7 @@ def get_codes():
 
 
 def rates_to_csv():
+    rates = get_rates()
     fieldnames = ['currency', 'code', 'bid', 'ask']
     with open('rates.csv', 'w') as csvfile:
         writer = csv.DictWriter(csvfile, delimiter=';', fieldnames=fieldnames)
@@ -34,6 +38,7 @@ rates_to_csv()
 
 @app.route('/form', methods=["GET", "POST"])
 def form():
+    rates = get_rates()
     codes = get_codes()
     if request.method == "POST":
         data = request.form
@@ -45,6 +50,7 @@ def form():
                 break
         cost = float(amount) * ask
         return (render_template("form.html", codes = codes) +
-            f"The total cost of this transaction: {cost:.2f}")
+            f"The total cost of this transaction: {cost:.2f} PLN")
         
     return render_template("form.html", codes = codes)
+
